@@ -19,7 +19,7 @@ void debugLog(const char *format, ...)
         va_start(args, format);
         vsnprintf(buf, 128, format, args);
         va_end(args);
-        Serial.print(buf);
+        Serial.println("[Debug]" + String(buf));
     }
 }
 
@@ -28,7 +28,7 @@ void debugLog(String log)
 {
     if (_socketIOClient->isDebug)
     {
-        Serial.print(log);
+        Serial.println("[Debug]" + log);
     }
 }
 
@@ -71,7 +71,10 @@ void socketIOEvent(WStype_t type, uint8_t *payload, size_t lenght)
 
 ESPSocketIO::ESPSocketIO()
 {
-    _socketIOClient = this;
+    _socketIOClient          = this;
+    this->heartbeatTimestamp = 0;
+    this->isConnected        = false;
+    this->client.onEvent(socketIOEvent);
 }
 
 
@@ -105,6 +108,14 @@ bool ESPSocketIO::connected()
 void ESPSocketIO::loop()
 {
     this->client.loop();
+
+    unsigned long currentMillis = millis();
+    if ((currentMillis - heartbeatTimestamp) > HEARTBEAT_INTERVAL)
+    {
+        heartbeatTimestamp = currentMillis;
+        // socket.io heartbeat message
+        this->sendHeartbeat();
+    }
 }
 
 
@@ -118,7 +129,7 @@ void ESPSocketIO::emit(String event, String payload)
 {
     String message = "42[\"" + event + "\"," + payload + "]";
 
-    debugLog(message.c_str());
+    debugLog(message);
 
     this->client.sendTXT(message);
 }
@@ -126,7 +137,7 @@ void ESPSocketIO::emit(String event, String payload)
 
 void ESPSocketIO::sendText(String text)
 {
-    debugLog(text.c_str());
+    debugLog(text);
 
     this->client.sendTXT(text);
 }
@@ -135,6 +146,12 @@ void ESPSocketIO::sendText(String text)
 void ESPSocketIO::parse(String payload)
 {
     debugLog("Parse: " + payload);
+
+    if (payload.length() < 4)
+    {
+        return;
+    }
+
     int    startIndex = 4;
     int    endIndex   = payload.indexOf("\",");
     String eventName  = payload.substring(startIndex, endIndex);
@@ -149,19 +166,29 @@ void ESPSocketIO::parse(String payload)
 
     payload.remove(payload.length() - 1);
 
-    SocketIOMessage message = NULL;
+    bool isFound = false;
     for (auto const & event : this->events)
     {
         debugLog("Event: " + event.first);
         if (event.first.equals(eventName))
         {
-            message = (SocketIOMessage)event.second;
+            event.second(payload);
+            isFound = true;
             break;
         }
     }
 
-    if (message != NULL)
+    if (!isFound)
     {
-        message(payload);
+        debugLog("Not found event handler for: " + payload);
+    }
+}
+
+
+void ESPSocketIO::sendHeartbeat()
+{
+    if (this->isConnected)
+    {
+        this->sendText("2");
     }
 }

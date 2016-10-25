@@ -16,6 +16,8 @@
 #include <functional>
 #include <WebSocketsClient.h>
 
+#define HEARTBEAT_INTERVAL    25000
+
 typedef std::function<void (String content)>   SocketIOMessage;
 
 class ESPSocketIO {
@@ -23,6 +25,8 @@ private:
 
     std::map<String, SocketIOMessage> events;
     WebSocketsClient client;
+    uint64_t         heartbeatTimestamp;
+    void sendHeartbeat();
 
 public:
     ESPSocketIO();
