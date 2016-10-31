@@ -121,7 +121,7 @@ void ESPSocketIO::loop()
 
 bool ESPSocketIO::on(String event, SocketIOMessage callback)
 {
-    this->events.insert(std::pair<String, SocketIOMessage>(event, callback));
+    return this->events.insert(std::pair<String, SocketIOMessage>(event, callback)).second;
 }
 
 
