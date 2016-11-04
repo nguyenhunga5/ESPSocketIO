@@ -45,6 +45,7 @@ public:
     void loop();
 
     bool on(String event, SocketIOMessage callback);
+    void removeListener(String eventName);
     void emit(String event, String payload);
     void sendText(String text);
 

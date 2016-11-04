@@ -125,6 +125,12 @@ bool ESPSocketIO::on(String event, SocketIOMessage callback)
 }
 
 
+void ESPSocketIO::removeListener(String eventName)
+{
+    this->events.erase(eventName);
+}
+
+
 void ESPSocketIO::emit(String event, String payload)
 {
     String message = "42[\"" + event + "\"," + payload + "]";
